@@ -101,6 +101,21 @@ User: 👍 (Thumbs up)
 Claude: Great! I've saved this approved image for you.
 ```
 
+## Gemini Integration for Multi-View Generation
+
+After a user approves an image (by clicking the thumbs up icon), the system automatically processes the approved image through Google's Gemini API to generate multiple consistent views of the 3D object:
+
+1. The approved Venice AI image is used as input to the Gemini view generation scripts
+2. Four different views are generated sequentially:
+   - Front view (0°) - Generated first
+   - Right view (90°) - Generated after front view completes
+   - Left view (270°) - Generated after right view completes
+   - Back view (180°) - Generated after left view completes
+3. Each view is displayed in a 4-up layout as it becomes available
+4. Each script waits for the previous script to complete successfully before executing
+
+This multi-view generation leverages Gemini's object consistency capabilities to create coherent representations of the 3D object from different angles while maintaining the same style, colors, and proportions as the original Venice AI image.
+
 ## Future Enhancements
 
 Potential future improvements include:
@@ -108,7 +123,7 @@ Potential future improvements include:
 1. **Persistent Storage**: Save approved images to a database
 2. **Image Editing**: Allow users to request specific modifications to generated images
 3. **Multiple Image Generation**: Generate several variations at once for the user to choose from
-4. **Integration with Gemini**: Add support for generating different views of 3D objects using Google's Gemini API
+4. **Additional Views**: Generate more angles beyond the four cardinal directions
 
 ## Venice AI Integration
 
