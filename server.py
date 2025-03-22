@@ -38,7 +38,7 @@ class ModelInfo(BaseModel):
 class ModelsResponse(BaseModel):
     models: List[ModelInfo] = Field(..., description="List of available models")
 
-@app.tool
+@app.tool()
 def generate_venice_image(params: ImageGenerationParams) -> ImageResponse:
     """Generate an image using Venice AI based on a text prompt.
     
@@ -93,7 +93,7 @@ def generate_venice_image(params: ImageGenerationParams) -> ImageResponse:
         thumbs_down_url=thumbs_down_url
     )
 
-@app.tool
+@app.tool()
 def approve_image(params: ImageApprovalParams) -> Dict[str, str]:
     """Mark an image as approved when the user gives a thumbs up.
     
@@ -114,7 +114,7 @@ def approve_image(params: ImageApprovalParams) -> Dict[str, str]:
     
     return {"message": f"Image {image_id} has been approved"}
 
-@app.tool
+@app.tool()
 def regenerate_image(params: ImageApprovalParams) -> ImageResponse:
     """Create a new image with the same parameters when the user gives a thumbs down.
     
@@ -142,7 +142,7 @@ def regenerate_image(params: ImageApprovalParams) -> ImageResponse:
         model=original_params["model"]
     ))
 
-@app.tool
+@app.tool()
 def list_available_models() -> ModelsResponse:
     """Provide information about available Venice AI models.
     
