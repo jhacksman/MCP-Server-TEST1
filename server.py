@@ -1,7 +1,7 @@
 import os
 import uuid
 from typing import Dict, List, Optional
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -39,7 +39,7 @@ class ModelsResponse(BaseModel):
     models: List[ModelInfo] = Field(..., description="List of available models")
 
 @app.tool()
-def generate_venice_image(params: ImageGenerationParams) -> ImageResponse:
+async def generate_venice_image(ctx: Context, params: ImageGenerationParams) -> ImageResponse:
     """Generate an image using Venice AI based on a text prompt.
     
     This tool creates an image from the provided text prompt and returns it with
@@ -94,7 +94,7 @@ def generate_venice_image(params: ImageGenerationParams) -> ImageResponse:
     )
 
 @app.tool()
-def approve_image(params: ImageApprovalParams) -> Dict[str, str]:
+async def approve_image(ctx: Context, params: ImageApprovalParams) -> Dict[str, str]:
     """Mark an image as approved when the user gives a thumbs up.
     
     Args:
@@ -115,7 +115,7 @@ def approve_image(params: ImageApprovalParams) -> Dict[str, str]:
     return {"message": f"Image {image_id} has been approved"}
 
 @app.tool()
-def regenerate_image(params: ImageApprovalParams) -> ImageResponse:
+async def regenerate_image(ctx: Context, params: ImageApprovalParams) -> ImageResponse:
     """Create a new image with the same parameters when the user gives a thumbs down.
     
     Args:
@@ -134,7 +134,7 @@ def regenerate_image(params: ImageApprovalParams) -> ImageResponse:
     original_params = image_cache[image_id]
     
     # Generate a new image with the same parameters
-    return generate_venice_image(ImageGenerationParams(
+    return await generate_venice_image(ctx, ImageGenerationParams(
         prompt=original_params["prompt"],
         height=original_params["height"],
         width=original_params["width"],
@@ -143,7 +143,7 @@ def regenerate_image(params: ImageApprovalParams) -> ImageResponse:
     ))
 
 @app.tool()
-def list_available_models() -> ModelsResponse:
+async def list_available_models(ctx: Context) -> ModelsResponse:
     """Provide information about available Venice AI models.
     
     Returns:
