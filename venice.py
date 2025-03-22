@@ -1,3 +1,4 @@
+import os
 import requests
 
 def generate_image(prompt, height=1024, width=1024, steps=20, model="fluently-xl"):
@@ -28,8 +29,11 @@ def generate_image(prompt, height=1024, width=1024, steps=20, model="fluently-xl
         "prompt": prompt
     }
     
+    # Get API key from environment variable or use default for testing
+    api_key = os.environ.get("VENICE_API_KEY", "B9Y68yQgatQw8wmpmnIMYcGip1phCt-43CS0OktZU6")
+    
     headers = {
-        "Authorization": "Bearer B9Y68yQgatQw8wmpmnIMYcGip1phCt-43CS0OktZU6",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
     
