@@ -1,7 +1,7 @@
 import os
 import uuid
 from typing import Dict, List, Optional
-from fastmcp import FastMCP, Tool, ToolCall
+from fastmcp import FastMCP
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
