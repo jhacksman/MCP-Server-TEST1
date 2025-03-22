@@ -1,15 +1,15 @@
 import os
 import uuid
+import json
 from typing import Dict, List, Optional
-from fastmcp import FastMCP, Context
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import uvicorn
 from venice import generate_image
 
-# Create the MCP server
-app = FastMCP()
+# Create the FastAPI app
+app = FastAPI(title="Venice AI Image Generator MCP Server")
 
 # In-memory cache for tracking generated images and their approval status
 image_cache = {}
@@ -38,29 +38,200 @@ class ModelInfo(BaseModel):
 class ModelsResponse(BaseModel):
     models: List[ModelInfo] = Field(..., description="List of available models")
 
-@app.tool()
-async def generate_venice_image(ctx: Context, params: ImageGenerationParams) -> ImageResponse:
-    """Generate an image using Venice AI based on a text prompt.
-    
-    This tool creates an image from the provided text prompt and returns it with
-    approval options (thumbs up/down) that can be displayed to the user.
-    
-    Args:
-        params: Parameters for image generation including prompt, dimensions, etc.
+# MCP Tool definitions
+MCP_TOOLS = [
+    {
+        "name": "generate_venice_image",
+        "description": "Generate an image using Venice AI based on a text prompt",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": "The prompt describing the image to generate"
+                },
+                "height": {
+                    "type": "integer",
+                    "description": "Image height in pixels",
+                    "default": 1024
+                },
+                "width": {
+                    "type": "integer",
+                    "description": "Image width in pixels",
+                    "default": 1024
+                },
+                "steps": {
+                    "type": "integer",
+                    "description": "Number of diffusion steps",
+                    "default": 20
+                },
+                "model": {
+                    "type": "string",
+                    "description": "Model to use for generation",
+                    "default": "fluently-xl"
+                }
+            },
+            "required": ["prompt"]
+        },
+        "returns": {
+            "type": "object",
+            "properties": {
+                "image_id": {
+                    "type": "string",
+                    "description": "Unique identifier for the generated image"
+                },
+                "image_url": {
+                    "type": "string",
+                    "description": "URL of the generated image"
+                },
+                "thumbs_up_url": {
+                    "type": "string",
+                    "description": "URL to approve the image"
+                },
+                "thumbs_down_url": {
+                    "type": "string",
+                    "description": "URL to regenerate the image"
+                }
+            }
+        }
+    },
+    {
+        "name": "approve_image",
+        "description": "Mark an image as approved when the user gives a thumbs up",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "image_id": {
+                    "type": "string",
+                    "description": "ID of the image to approve"
+                }
+            },
+            "required": ["image_id"]
+        },
+        "returns": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "description": "Confirmation message"
+                }
+            }
+        }
+    },
+    {
+        "name": "regenerate_image",
+        "description": "Create a new image with the same parameters when the user gives a thumbs down",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "image_id": {
+                    "type": "string",
+                    "description": "ID of the image to regenerate"
+                }
+            },
+            "required": ["image_id"]
+        },
+        "returns": {
+            "type": "object",
+            "properties": {
+                "image_id": {
+                    "type": "string",
+                    "description": "Unique identifier for the generated image"
+                },
+                "image_url": {
+                    "type": "string",
+                    "description": "URL of the generated image"
+                },
+                "thumbs_up_url": {
+                    "type": "string",
+                    "description": "URL to approve the image"
+                },
+                "thumbs_down_url": {
+                    "type": "string",
+                    "description": "URL to regenerate the image"
+                }
+            }
+        }
+    },
+    {
+        "name": "list_available_models",
+        "description": "Provide information about available Venice AI models",
+        "parameters": {
+            "type": "object",
+            "properties": {}
+        },
+        "returns": {
+            "type": "object",
+            "properties": {
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "description": "Model identifier"
+                            },
+                            "name": {
+                                "type": "string",
+                                "description": "Human-readable model name"
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "Description of the model's capabilities"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+]
+
+# MCP endpoints
+@app.get("/mcp/tools/list")
+async def list_tools():
+    """List all available MCP tools."""
+    return {"tools": MCP_TOOLS}
+
+@app.post("/mcp/tools/call")
+async def call_tool(request: Request):
+    """Call an MCP tool with the provided parameters."""
+    try:
+        data = await request.json()
+        tool_name = data.get("tool_name")
+        parameters = data.get("parameters", {})
         
-    Returns:
-        An object containing the image URL and approval options
-    """
+        if not tool_name:
+            return JSONResponse(status_code=400, content={"error": "Missing tool_name"})
+        
+        # Call the appropriate tool function
+        if tool_name == "generate_venice_image":
+            return await generate_venice_image(parameters)
+        elif tool_name == "approve_image":
+            return await approve_image(parameters)
+        elif tool_name == "regenerate_image":
+            return await regenerate_image(parameters)
+        elif tool_name == "list_available_models":
+            return await list_available_models()
+        else:
+            return JSONResponse(status_code=404, content={"error": f"Tool {tool_name} not found"})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+# Tool implementations
+async def generate_venice_image(params):
+    """Generate an image using Venice AI based on a text prompt."""
     # Generate a unique ID for this image
     image_id = str(uuid.uuid4())
     
     # Call Venice AI API to generate the image
     response = generate_image(
-        prompt=params.prompt,
-        height=params.height,
-        width=params.width,
-        steps=params.steps,
-        model=params.model
+        prompt=params.get("prompt"),
+        height=params.get("height", 1024),
+        width=params.get("width", 1024),
+        steps=params.get("steps", 20),
+        model=params.get("model", "fluently-xl")
     )
     
     # Extract the image URL from the response
@@ -71,11 +242,11 @@ async def generate_venice_image(ctx: Context, params: ImageGenerationParams) -> 
     
     # Store the image details in the cache
     image_cache[image_id] = {
-        "prompt": params.prompt,
-        "height": params.height,
-        "width": params.width,
-        "steps": params.steps,
-        "model": params.model,
+        "prompt": params.get("prompt"),
+        "height": params.get("height", 1024),
+        "width": params.get("width", 1024),
+        "steps": params.get("steps", 20),
+        "model": params.get("model", "fluently-xl"),
         "image_url": image_url,
         "approved": False
     }
@@ -86,24 +257,16 @@ async def generate_venice_image(ctx: Context, params: ImageGenerationParams) -> 
     thumbs_up_url = f"https://example.com/approve/{image_id}"
     thumbs_down_url = f"https://example.com/regenerate/{image_id}"
     
-    return ImageResponse(
-        image_id=image_id,
-        image_url=image_url,
-        thumbs_up_url=thumbs_up_url,
-        thumbs_down_url=thumbs_down_url
-    )
+    return {
+        "image_id": image_id,
+        "image_url": image_url,
+        "thumbs_up_url": thumbs_up_url,
+        "thumbs_down_url": thumbs_down_url
+    }
 
-@app.tool()
-async def approve_image(ctx: Context, params: ImageApprovalParams) -> Dict[str, str]:
-    """Mark an image as approved when the user gives a thumbs up.
-    
-    Args:
-        params: Parameters containing the image ID to approve
-        
-    Returns:
-        A confirmation message
-    """
-    image_id = params.image_id
+async def approve_image(params):
+    """Mark an image as approved when the user gives a thumbs up."""
+    image_id = params.get("image_id")
     
     # Check if the image exists in the cache
     if image_id not in image_cache:
@@ -114,17 +277,9 @@ async def approve_image(ctx: Context, params: ImageApprovalParams) -> Dict[str, 
     
     return {"message": f"Image {image_id} has been approved"}
 
-@app.tool()
-async def regenerate_image(ctx: Context, params: ImageApprovalParams) -> ImageResponse:
-    """Create a new image with the same parameters when the user gives a thumbs down.
-    
-    Args:
-        params: Parameters containing the image ID to regenerate
-        
-    Returns:
-        A new image with approval options
-    """
-    image_id = params.image_id
+async def regenerate_image(params):
+    """Create a new image with the same parameters when the user gives a thumbs down."""
+    image_id = params.get("image_id")
     
     # Check if the image exists in the cache
     if image_id not in image_cache:
@@ -134,59 +289,48 @@ async def regenerate_image(ctx: Context, params: ImageApprovalParams) -> ImageRe
     original_params = image_cache[image_id]
     
     # Generate a new image with the same parameters
-    return await generate_venice_image(ctx, ImageGenerationParams(
-        prompt=original_params["prompt"],
-        height=original_params["height"],
-        width=original_params["width"],
-        steps=original_params["steps"],
-        model=original_params["model"]
-    ))
+    return await generate_venice_image({
+        "prompt": original_params["prompt"],
+        "height": original_params["height"],
+        "width": original_params["width"],
+        "steps": original_params["steps"],
+        "model": original_params["model"]
+    })
 
-@app.tool()
-async def list_available_models(ctx: Context) -> ModelsResponse:
-    """Provide information about available Venice AI models.
-    
-    Returns:
-        A list of available models with their details
-    """
+async def list_available_models():
+    """Provide information about available Venice AI models."""
     # In a real implementation, this would fetch the actual list of models from Venice AI
     # For this example, we'll return a static list
     models = [
-        ModelInfo(
-            id="fluently-xl",
-            name="Fluently XL",
-            description="High-quality image generation model with excellent detail and composition"
-        ),
-        ModelInfo(
-            id="fluently-base",
-            name="Fluently Base",
-            description="Standard image generation model with good quality and faster generation"
-        ),
-        ModelInfo(
-            id="fluently-creative",
-            name="Fluently Creative",
-            description="Model optimized for creative and artistic image generation"
-        )
+        {
+            "id": "fluently-xl",
+            "name": "Fluently XL",
+            "description": "High-quality image generation model with excellent detail and composition"
+        },
+        {
+            "id": "fluently-base",
+            "name": "Fluently Base",
+            "description": "Standard image generation model with good quality and faster generation"
+        },
+        {
+            "id": "fluently-creative",
+            "name": "Fluently Creative",
+            "description": "Model optimized for creative and artistic image generation"
+        }
     ]
     
-    return ModelsResponse(models=models)
-
-# Create a FastAPI app that includes the MCP server
-fastapi_app = FastAPI(title="Venice AI Image Generator MCP Server")
-
-# Mount the MCP server at the /mcp path
-fastapi_app.mount("/mcp", app)
+    return {"models": models}
 
 # Add a simple health check endpoint
-@fastapi_app.get("/health")
+@app.get("/health")
 def health_check():
     return {"status": "healthy"}
 
 # Add an endpoint to view the image cache (for debugging)
-@fastapi_app.get("/debug/cache")
+@app.get("/debug/cache")
 def view_cache():
     return JSONResponse(content=image_cache)
 
 if __name__ == "__main__":
     # Run the server
-    uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
