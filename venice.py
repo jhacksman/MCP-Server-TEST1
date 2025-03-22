@@ -29,8 +29,12 @@ def generate_image(prompt, height=1024, width=1024, steps=20, model="fluently-xl
         "prompt": prompt
     }
     
-    # Get API key from environment variable or use default for testing
-    api_key = os.environ.get("VENICE_API_KEY", "B9Y68yQgatQw8wmpmnIMYcGip1phCt-43CS0OktZU6")
+    # Get API key from environment variable
+    api_key = os.environ.get("VENICE_API_KEY")
+    
+    # Check if API key is available
+    if not api_key:
+        raise ValueError("VENICE_API_KEY environment variable is not set")
     
     headers = {
         "Authorization": f"Bearer {api_key}",
