@@ -114,6 +114,25 @@ After a user approves an image (by clicking the thumbs up icon), the system auto
 3. Each view is displayed in a 4-up layout as it becomes available
 4. Each script waits for the previous script to complete successfully before executing
 
+### 4-Up View Approval Process
+
+Each of the four generated views has its own thumbs up/down approval system:
+
+1. Each view in the 4-up display has thumbs up/down icons overlaid on the image
+2. If a user selects thumbs down for any specific view:
+   - The corresponding Python script for that view is run again
+   - The newly generated image replaces the rejected image in the 4-up display
+   - This process repeats until the user approves the image with thumbs up
+3. Each view can be individually approved or regenerated
+
+### 3D Model Generation
+
+Once all four views are approved:
+
+1. The original Venice AI image and the four approved Gemini-generated views are processed using [CUDA Multi-View Stereo](https://github.com/fixstars/cuda-multi-view-stereo)
+2. This processing occurs on a dedicated Linux server on the network
+3. The CUDA Multi-View Stereo system converts the 2D images into a 3D model
+
 This multi-view generation leverages Gemini's object consistency capabilities to create coherent representations of the 3D object from different angles while maintaining the same style, colors, and proportions as the original Venice AI image.
 
 ## Future Enhancements
