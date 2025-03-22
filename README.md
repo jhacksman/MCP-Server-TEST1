@@ -6,6 +6,8 @@ This project implements a Model Context Protocol (MCP) server that integrates wi
 
 The Model Context Protocol (MCP) is an open protocol that standardizes how applications provide context to Large Language Models (LLMs). It acts as a "USB-C port for AI applications," allowing LLMs to connect to various data sources and tools in a standardized way.
 
+For more information, visit the [official MCP introduction page](https://modelcontextprotocol.io/introduction).
+
 ## Project Overview
 
 This MCP server provides a bridge between LLMs (like Claude) and Venice AI's image generation capabilities. It enables LLMs to generate images based on text prompts and implements an interactive approval workflow with thumbs up/down feedback.
@@ -125,3 +127,14 @@ To implement this server, you would need to:
 2. Set up Venice AI API credentials
 3. Implement the MCP tools as described
 4. Run the server and connect it to an LLM host
+
+## MCP Resources
+
+For more information about the Model Context Protocol and how to build MCP servers, check out these resources:
+
+- [MCP Introduction](https://modelcontextprotocol.io/introduction) - Official introduction to the Model Context Protocol
+- [MCP SDKs](https://modelcontextprotocol.io/sdks) - Official SDKs for Python, TypeScript, Java, and Kotlin
+- [MCP GitHub Repository](https://github.com/modelcontextprotocol) - Official MCP implementation and examples
+- [Building MCP with LLMs](https://modelcontextprotocol.io/tutorials/building-mcp-with-llms) - Tutorial on using LLMs to build MCP servers
+- [Example Servers](https://modelcontextprotocol.io/examples) - Gallery of official MCP server implementations
+- [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) - Interactive debugging tool for MCP servers
