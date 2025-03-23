@@ -67,9 +67,8 @@ MCP_TOOLS = [
                 },
                 "model": {
                     "type": "string",
-                    "description": "Model ID to use for generation (use list_available_models to see options)",
-                    "default": "fluently-xl",
-                    "enum": ["fluently-xl", "fluently-base", "fluently-creative"]
+                    "description": "Model ID to use for generation. First call list_available_models to get available options.",
+                    "default": "fluently-xl"
                 }
             },
             "required": ["prompt"]
@@ -226,13 +225,34 @@ async def generate_venice_image(params):
     # Generate a unique ID for this image
     image_id = str(uuid.uuid4())
     
+    # Get the model from parameters
+    model = params.get("model", "fluently-xl")
+    
+    # Validate model exists
+    try:
+        # Try to fetch available models
+        models_response = await list_available_models()
+        available_models = [m["id"] for m in models_response.get("models", [])]
+        
+        if model not in available_models:
+            # If model doesn't exist, return helpful error
+            return JSONResponse(
+                status_code=400, 
+                content={
+                    "error": f"Model '{model}' not found. Use list_available_models to see available options."
+                }
+            )
+    except Exception as e:
+        # If we can't validate, log but continue with requested model
+        print(f"Warning: Could not validate model '{model}': {str(e)}")
+    
     # Call Venice AI API to generate the image
     response = generate_image(
         prompt=params.get("prompt"),
         height=params.get("height", 1024),
         width=params.get("width", 1024),
         steps=params.get("steps", 20),
-        model=params.get("model", "fluently-xl")
+        model=model
     )
     
     # Extract the image URL from the response
@@ -324,7 +344,10 @@ async def list_available_models():
         
         # Parse and return models from the API response
         models_data = response.json()
-        return {"models": models_data}
+        return {
+            "models": models_data,
+            "usage_hint": "To use a model, call generate_venice_image with the model ID in the model parameter."
+        }
         
     except Exception as e:
         # Fallback to static list if API call fails
@@ -348,7 +371,10 @@ async def list_available_models():
             }
         ]
         
-        return {"models": models}
+        return {
+            "models": models,
+            "usage_hint": "To use a model, call generate_venice_image with the model ID in the model parameter."
+        }
 
 # Add a simple health check endpoint
 @app.get("/health")
