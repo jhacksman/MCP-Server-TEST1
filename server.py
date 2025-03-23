@@ -67,7 +67,7 @@ MCP_TOOLS = [
                 },
                 "model": {
                     "type": "string",
-                    "description": "Model ID to use for generation. First call list_available_models to get available options.",
+                    "description": "Model ID to use for generation (optional). If not specified, the default model will be used. Call list_available_models to see all options.",
                     "default": "fluently-xl"
                 }
             },
@@ -91,6 +91,10 @@ MCP_TOOLS = [
                 "thumbs_down_url": {
                     "type": "string",
                     "description": "URL to regenerate the image"
+                },
+                "html": {
+                    "type": "string",
+                    "description": "HTML with hover-based thumbs up/down UI for the image"
                 }
             }
         }
@@ -149,6 +153,10 @@ MCP_TOOLS = [
                 "thumbs_down_url": {
                     "type": "string",
                     "description": "URL to regenerate the image"
+                },
+                "html": {
+                    "type": "string",
+                    "description": "HTML with hover-based thumbs up/down UI for the image"
                 }
             }
         }
@@ -228,23 +236,24 @@ async def generate_venice_image(params):
     # Get the model from parameters
     model = params.get("model", "fluently-xl")
     
-    # Validate model exists
-    try:
-        # Try to fetch available models
-        models_response = await list_available_models()
-        available_models = [m["id"] for m in models_response.get("models", [])]
-        
-        if model not in available_models:
-            # If model doesn't exist, return helpful error
-            return JSONResponse(
-                status_code=400, 
-                content={
-                    "error": f"Model '{model}' not found. Use list_available_models to see available options."
-                }
-            )
-    except Exception as e:
-        # If we can't validate, log but continue with requested model
-        print(f"Warning: Could not validate model '{model}': {str(e)}")
+    # Validate model exists if a specific model was requested
+    if "model" in params:
+        try:
+            # Try to fetch available models
+            models_response = await list_available_models()
+            available_models = [m["id"] for m in models_response.get("models", [])]
+            
+            if model not in available_models:
+                # If model doesn't exist, return helpful error and suggest using default
+                return JSONResponse(
+                    status_code=400, 
+                    content={
+                        "error": f"Model '{model}' not found. Use list_available_models to see available options or omit the model parameter to use the default model."
+                    }
+                )
+        except Exception as e:
+            # If we can't validate, log but continue with requested model
+            print(f"Warning: Could not validate model '{model}': {str(e)}")
     
     # Call Venice AI API to generate the image
     response = generate_image(
@@ -277,16 +286,54 @@ async def generate_venice_image(params):
     }
     
     # Create approval URLs
-    # In a real implementation, these would be actual URLs that the user can click
-    # For this example, we'll use placeholder URLs that include the image ID
-    thumbs_up_url = f"https://example.com/approve/{image_id}"
-    thumbs_down_url = f"https://example.com/regenerate/{image_id}"
+    # These URLs will be used for the API calls
+    thumbs_up_url = f"/mcp/tools/call?tool_name=approve_image&image_id={image_id}"
+    thumbs_down_url = f"/mcp/tools/call?tool_name=regenerate_image&image_id={image_id}"
+    
+    # Create HTML with thumbs up/down buttons that appear on hover
+    html_wrapper = f"""
+    <div class="venice-image-container" style="position: relative; display: inline-block;">
+        <img src="{image_url}" alt="Generated image" style="max-width: 100%; height: auto;" />
+        <div class="hover-controls" style="position: absolute; bottom: 10px; right: 10px; display: none; background-color: rgba(0,0,0,0.5); border-radius: 5px; padding: 5px;">
+            <a href="#" onclick="callApproveImage('{image_id}'); return false;" style="margin-right: 10px; font-size: 24px; text-decoration: none;">👍</a>
+            <a href="#" onclick="callRegenerateImage('{image_id}'); return false;" style="font-size: 24px; text-decoration: none;">👎</a>
+        </div>
+        <style>
+            .venice-image-container:hover .hover-controls {{
+                display: flex !important;
+            }}
+        </style>
+        <script>
+            function callApproveImage(id) {{
+                fetch('/mcp/tools/call', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{
+                        "tool_name": "approve_image",
+                        "parameters": {{"image_id": id}}
+                    }})
+                }});
+            }}
+            function callRegenerateImage(id) {{
+                fetch('/mcp/tools/call', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{
+                        "tool_name": "regenerate_image",
+                        "parameters": {{"image_id": id}}
+                    }})
+                }});
+            }}
+        </script>
+    </div>
+    """
     
     return {
         "image_id": image_id,
         "image_url": image_url,
         "thumbs_up_url": thumbs_up_url,
-        "thumbs_down_url": thumbs_down_url
+        "thumbs_down_url": thumbs_down_url,
+        "html": html_wrapper
     }
 
 async def approve_image(params):
@@ -300,7 +347,7 @@ async def approve_image(params):
     # Mark the image as approved
     image_cache[image_id]["approved"] = True
     
-    return {"message": f"Image {image_id} has been approved"}
+    return {"message": f"Image {image_id} has been approved", "success": True}
 
 async def regenerate_image(params):
     """Create a new image with the same parameters when the user gives a thumbs down."""
