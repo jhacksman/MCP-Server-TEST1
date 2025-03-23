@@ -67,7 +67,7 @@ MCP_TOOLS = [
                 },
                 "model": {
                     "type": "string",
-                    "description": "Model to use for generation",
+                    "description": "Model ID to use for generation. First call list_available_models to get available options.",
                     "default": "fluently-xl"
                 }
             },
@@ -225,13 +225,34 @@ async def generate_venice_image(params):
     # Generate a unique ID for this image
     image_id = str(uuid.uuid4())
     
+    # Get the model from parameters
+    model = params.get("model", "fluently-xl")
+    
+    # Validate model exists
+    try:
+        # Try to fetch available models
+        models_response = await list_available_models()
+        available_models = [m["id"] for m in models_response.get("models", [])]
+        
+        if model not in available_models:
+            # If model doesn't exist, return helpful error
+            return JSONResponse(
+                status_code=400, 
+                content={
+                    "error": f"Model '{model}' not found. Use list_available_models to see available options."
+                }
+            )
+    except Exception as e:
+        # If we can't validate, log but continue with requested model
+        print(f"Warning: Could not validate model '{model}': {str(e)}")
+    
     # Call Venice AI API to generate the image
     response = generate_image(
         prompt=params.get("prompt"),
         height=params.get("height", 1024),
         width=params.get("width", 1024),
         steps=params.get("steps", 20),
-        model=params.get("model", "fluently-xl")
+        model=model
     )
     
     # Extract the image URL from the response
@@ -303,27 +324,57 @@ async def regenerate_image(params):
 
 async def list_available_models():
     """Provide information about available Venice AI models."""
-    # In a real implementation, this would fetch the actual list of models from Venice AI
-    # For this example, we'll return a static list
-    models = [
-        {
-            "id": "fluently-xl",
-            "name": "Fluently XL",
-            "description": "High-quality image generation model with excellent detail and composition"
-        },
-        {
-            "id": "fluently-base",
-            "name": "Fluently Base",
-            "description": "Standard image generation model with good quality and faster generation"
-        },
-        {
-            "id": "fluently-creative",
-            "name": "Fluently Creative",
-            "description": "Model optimized for creative and artistic image generation"
+    try:
+        # Attempt to fetch models from the Venice AI API
+        api_key = os.environ.get("VENICE_API_KEY")
+        if not api_key:
+            raise ValueError("VENICE_API_KEY environment variable is not set")
+            
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
         }
-    ]
-    
-    return {"models": models}
+        
+        # Import requests here to avoid global import if not needed
+        import requests
+        
+        # Use the correct endpoint for Venice AI image models
+        response = requests.get("https://api.venice.ai/api/v1/models?type=image", headers=headers)
+        response.raise_for_status()
+        
+        # Parse and return models from the API response
+        models_data = response.json()
+        return {
+            "models": models_data,
+            "usage_hint": "To use a model, call generate_venice_image with the model ID in the model parameter."
+        }
+        
+    except Exception as e:
+        # Fallback to static list if API call fails
+        print(f"Error fetching models from API: {str(e)}")
+        # Return the existing fallback models
+        models = [
+            {
+                "id": "fluently-xl",
+                "name": "Fluently XL",
+                "description": "High-quality image generation model with excellent detail and composition"
+            },
+            {
+                "id": "fluently-base",
+                "name": "Fluently Base",
+                "description": "Standard image generation model with good quality and faster generation"
+            },
+            {
+                "id": "fluently-creative",
+                "name": "Fluently Creative",
+                "description": "Model optimized for creative and artistic image generation"
+            }
+        ]
+        
+        return {
+            "models": models,
+            "usage_hint": "To use a model, call generate_venice_image with the model ID in the model parameter."
+        }
 
 # Add a simple health check endpoint
 @app.get("/health")
