@@ -67,8 +67,9 @@ MCP_TOOLS = [
                 },
                 "model": {
                     "type": "string",
-                    "description": "Model to use for generation",
-                    "default": "fluently-xl"
+                    "description": "Model ID to use for generation (use list_available_models to see options)",
+                    "default": "fluently-xl",
+                    "enum": ["fluently-xl", "fluently-base", "fluently-creative"]
                 }
             },
             "required": ["prompt"]
