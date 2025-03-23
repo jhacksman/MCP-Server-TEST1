@@ -317,7 +317,8 @@ async def list_available_models():
         # Import requests here to avoid global import if not needed
         import requests
         
-        response = requests.get("https://api.venice.ai/models", headers=headers)
+        # Use the correct endpoint for Venice AI image models
+        response = requests.get("https://api.venice.ai/api/v1/models?type=image", headers=headers)
         response.raise_for_status()
         
         # Parse and return models from the API response
