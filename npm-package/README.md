@@ -6,26 +6,26 @@ A Model Context Protocol (MCP) server for Venice AI image generation that can be
 
 ```bash
 # Install globally
-npm install -g venice-ai-mcp
+npm install -g venice-ai-images-mcp
 
 # Or run with npx
-npx venice-ai-mcp
+npx venice-ai-images-mcp
 ```
 
 ## Usage
 
 ```bash
 # Start the server with default settings
-venice-ai-mcp
+venice-ai-images-mcp
 
 # Start with a specific port
-venice-ai-mcp --port 8080
+venice-ai-images-mcp --port 8080
 
 # Provide Venice AI API key
-venice-ai-mcp --api-key YOUR_API_KEY
+venice-ai-images-mcp --api-key YOUR_API_KEY
 
 # Get help
-venice-ai-mcp --help
+venice-ai-images-mcp --help
 ```
 
 ## Claude Desktop Integration

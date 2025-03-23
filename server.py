@@ -303,27 +303,50 @@ async def regenerate_image(params):
 
 async def list_available_models():
     """Provide information about available Venice AI models."""
-    # In a real implementation, this would fetch the actual list of models from Venice AI
-    # For this example, we'll return a static list
-    models = [
-        {
-            "id": "fluently-xl",
-            "name": "Fluently XL",
-            "description": "High-quality image generation model with excellent detail and composition"
-        },
-        {
-            "id": "fluently-base",
-            "name": "Fluently Base",
-            "description": "Standard image generation model with good quality and faster generation"
-        },
-        {
-            "id": "fluently-creative",
-            "name": "Fluently Creative",
-            "description": "Model optimized for creative and artistic image generation"
+    try:
+        # Attempt to fetch models from the Venice AI API
+        api_key = os.environ.get("VENICE_API_KEY")
+        if not api_key:
+            raise ValueError("VENICE_API_KEY environment variable is not set")
+            
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
         }
-    ]
-    
-    return {"models": models}
+        
+        # Import requests here to avoid global import if not needed
+        import requests
+        
+        response = requests.get("https://api.venice.ai/models", headers=headers)
+        response.raise_for_status()
+        
+        # Parse and return models from the API response
+        models_data = response.json()
+        return {"models": models_data}
+        
+    except Exception as e:
+        # Fallback to static list if API call fails
+        print(f"Error fetching models from API: {str(e)}")
+        # Return the existing fallback models
+        models = [
+            {
+                "id": "fluently-xl",
+                "name": "Fluently XL",
+                "description": "High-quality image generation model with excellent detail and composition"
+            },
+            {
+                "id": "fluently-base",
+                "name": "Fluently Base",
+                "description": "Standard image generation model with good quality and faster generation"
+            },
+            {
+                "id": "fluently-creative",
+                "name": "Fluently Creative",
+                "description": "Model optimized for creative and artistic image generation"
+            }
+        ]
+        
+        return {"models": models}
 
 # Add a simple health check endpoint
 @app.get("/health")

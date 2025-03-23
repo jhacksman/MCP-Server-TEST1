@@ -77,7 +77,7 @@ app.listen(PORT + 1, () => {
   console.log(chalk.green(`
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
-║  Venice AI MCP Server is running!                          ║
+║  Venice AI Images MCP Server is running!                   ║
 ║                                                            ║
 ║  - MCP Server URL: http://localhost:${PORT}                 ║
 ║  - MCP Tools List: http://localhost:${PORT}/mcp/tools/list  ║

@@ -1,10 +1,10 @@
 {
-  "name": "venice-ai-mcp",
+  "name": "venice-ai-images-mcp",
   "version": "1.0.0",
   "description": "MCP Server for Venice AI image generation",
   "main": "index.js",
   "bin": {
-    "venice-ai-mcp": "./cli.js"
+    "venice-ai-images-mcp": "./cli.js"
   },
   "scripts": {
     "start": "node cli.js"
