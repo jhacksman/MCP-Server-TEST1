@@ -18,7 +18,9 @@ def generate_right_view(image_path, output_path=None):
         PIL.Image: The generated right side view image
     """
     # Initialize client with API key
-    api_key = os.environ.get("GOOGLE_API_KEY", "AIzaSyAU-Aa-4PnpXQgWILxJwq0yGBAfhtd4p90")
+    api_key = os.environ.get("GOOGLE_API_KEY")
+    if not api_key or not api_key.strip():
+        raise ValueError("GOOGLE_API_KEY environment variable must be set")
     client = genai.Client(api_key=api_key)
     
     # Load input image
