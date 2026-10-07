@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/jhacksman-mcp-server-test1-badge.png)](https://mseep.ai/app/jhacksman-mcp-server-test1)
+
 # Venice AI Image Generator MCP Server
 
 This project implements a Model Context Protocol (MCP) server that integrates with Venice AI for image generation with an approval/regeneration workflow.
